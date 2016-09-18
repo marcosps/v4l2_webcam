@@ -80,37 +80,8 @@ static int read_frame(void)
 static void mainloop(void)
 {
 	unsigned long count = 100;
-
-	while (count-- > 0) {
-		for (;;) {
-			fd_set fds;
-			struct timeval tv;
-			int r;
-
-			FD_ZERO (&fds);
-			FD_SET (fd, &fds);
-
-			/* Timeout. */
-			tv.tv_sec = 1;
-			tv.tv_usec = 0;
-
-			r = select (fd + 1, &fds, NULL, NULL, &tv);
-			switch(r) {
-			case -1:
-				if (EINTR == errno)
-					continue;
-				errno_exit ("select");
-				break;
-			case 0:
-				fprintf (stderr, "select timeout\n");
-				exit (EXIT_FAILURE);
-				break;
-			}
-
-			if (read_frame())
-				break;
-		}
-	}
+	while (count-- > 0)
+		read_frame();
 }
 
 static void stop_capturing(void)
