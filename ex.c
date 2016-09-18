@@ -4,6 +4,7 @@
  *  This program can be used and distributed without restrictions.
  */
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,11 +22,10 @@ static char *dev_name = "/dev/video0";
 static int fd         = -1;
 void *buffer_start    = NULL;
 int length = -1;
-static int video_width = 640;
-static int video_height = 480;
-static int video_depth = 16;
+int video_depth = 16;
 enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 SDL_Surface *surface;
+struct v4l2_format fmt;
 
 static void errno_exit(const char *s)
 {
@@ -55,8 +55,20 @@ static int read_frame(void)
 		}
 	}
 
-	memcpy(surface->pixels, (unsigned char *)buffer_start, video_width * video_height * (video_depth / 8));
+	memcpy(surface->pixels, (unsigned char *)buffer_start, fmt.fmt.pix.width * fmt.fmt.pix.height * (video_depth / 8));
+/*
+	SDL_Rect pos = {.x = 0, .y = 0};
+	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, length);
+	SDL_Surface *frame = IMG_Load_RW(buf_stream, 0);
+
+	SDL_BlitSurface(frame, NULL, surface, &pos);
+*/
 	SDL_Flip(surface);
+
+/*
+	SDL_FreeSurface(frame);
+	SDL_RWclose(buf_stream);
+ */
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -92,7 +104,6 @@ static void start_capturing(void)
 	if (ioctl(fd, VIDIOC_QBUF, &buf) == -1)
 		errno_exit ("VIDIOC_QBUF ... !!!");
 
-
 	if (ioctl(fd, VIDIOC_STREAMON, &type) == -1)
 		errno_exit ("VIDIOC_STREAMON");
 }
@@ -110,10 +121,15 @@ int init_view()
 		return -1;
 	}
 
-	if ((surface = SDL_SetVideoMode(video_width, video_height, video_depth, SDL_HWSURFACE)) == NULL) {
-		//printf("Unable to obtain video mode %dx%dx%d\n", video_width, video_height, video_depth);
+	// load support for the JPG and PNG image formats
+	if (!IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG)) {
+		printf("IMG_Init: %s\n", IMG_GetError());
 		return -1;
 	}
+
+	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth, SDL_HWSURFACE)) == NULL)
+		return -1;
+
 	return 0;
 }
 
@@ -162,7 +178,6 @@ static void init_mmap(void)
 static void init_device(void)
 {
 	struct v4l2_capability cap;
-	struct v4l2_format fmt;
 
 	memset(&cap, 0, sizeof(cap));
 	if (ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
@@ -180,8 +195,8 @@ static void init_device(void)
 
 	memset(&fmt, 0, sizeof(fmt));
 	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	fmt.fmt.pix.width       = video_width;
-	fmt.fmt.pix.height      = video_height;
+	fmt.fmt.pix.width       = 640;
+	fmt.fmt.pix.height      = 480;
 	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
 	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
