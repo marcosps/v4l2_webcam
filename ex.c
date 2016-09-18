@@ -35,16 +35,6 @@ static void errno_exit(const char *s)
         exit (EXIT_FAILURE);
 }
 
-static int xioctl(int request, void *arg)
-{
-        int r;
-        do {
-		r = ioctl (fd, request, arg);
-        } while (-1 == r && EINTR == errno);
-
-        return r;
-}
-
 static int read_frame(void)
 {
 	struct v4l2_buffer buf;
@@ -52,8 +42,8 @@ static int read_frame(void)
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
 
-	if (xioctl(VIDIOC_DQBUF, &buf) == -1) {
-		printf("xioctl dqbuf is wrong !!!\n");
+	if (ioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
+		printf("ioctl dqbuf is wrong !!!\n");
 		switch (errno) {
 			case EAGAIN:
 				return 0;
@@ -71,7 +61,7 @@ static int read_frame(void)
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
 
-	if (xioctl(VIDIOC_QBUF, &buf) == -1)
+	if (ioctl(fd, VIDIOC_QBUF, &buf) == -1)
 		errno_exit ("VIDIOC_QBUF");
 
 	return 1;
@@ -86,7 +76,7 @@ static void mainloop(void)
 
 static void stop_capturing(void)
 {
-	if (xioctl(VIDIOC_STREAMOFF, &type) == -1)
+	if (ioctl(fd, VIDIOC_STREAMOFF, &type) == -1)
 		errno_exit ("VIDIOC_STREAMOFF");
 }
 
@@ -99,11 +89,11 @@ static void start_capturing(void)
 	buf.memory = V4L2_MEMORY_MMAP;
 	buf.index = 0;
 
-	if (xioctl(VIDIOC_QBUF, &buf) == -1)
+	if (ioctl(fd, VIDIOC_QBUF, &buf) == -1)
 		errno_exit ("VIDIOC_QBUF ... !!!");
 
 
-	if (xioctl(VIDIOC_STREAMON, &type) == -1)
+	if (ioctl(fd, VIDIOC_STREAMON, &type) == -1)
 		errno_exit ("VIDIOC_STREAMON");
 }
 
@@ -146,7 +136,7 @@ static void init_mmap(void)
 	req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	req.memory = V4L2_MEMORY_MMAP;
 
-	if (xioctl(VIDIOC_REQBUFS, &req) == -1)
+	if (ioctl(fd, VIDIOC_REQBUFS, &req) == -1)
 		errno_exit ("VIDIOC_REQBUFS");
 
 	struct v4l2_buffer buf;
@@ -155,7 +145,7 @@ static void init_mmap(void)
 	buf.memory = V4L2_MEMORY_MMAP;
 	buf.index = 0;
 
-	if (xioctl(VIDIOC_QUERYBUF, &buf) == -1)
+	if (ioctl(fd, VIDIOC_QUERYBUF, &buf) == -1)
 		errno_exit ("VIDIOC_QUERYBUF");
 
 	length = buf.length;
@@ -175,7 +165,7 @@ static void init_device(void)
 	struct v4l2_format fmt;
 
 	memset(&cap, 0, sizeof(cap));
-	if (xioctl(VIDIOC_QUERYCAP, &cap) == -1)
+	if (ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
 		errno_exit ("VIDIOC_QUERYCAP");
 
 	if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
@@ -194,7 +184,7 @@ static void init_device(void)
 	fmt.fmt.pix.height      = video_height;
 	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
-	if (xioctl(VIDIOC_S_FMT, &fmt) == -1)
+	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
 		errno_exit ("VIDIOC_S_FMT");
 
 	init_mmap ();
