@@ -1,10 +1,4 @@
-/*
- *  V4L2 video capture example
- *
- *  This program can be used and distributed without restrictions.
- */
 #include <SDL/SDL.h>
-#include <SDL/SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,10 +16,10 @@ static char *dev_name = "/dev/video0";
 static int fd         = -1;
 void *buffer_start    = NULL;
 int length = -1;
-int video_depth = 16;
 enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-SDL_Surface *surface;
 struct v4l2_format fmt;
+SDL_Surface *surface;
+SDL_Overlay *overlay;
 
 static void errno_exit(const char *s)
 {
@@ -35,7 +29,7 @@ static void errno_exit(const char *s)
         exit (EXIT_FAILURE);
 }
 
-static int read_frame(void)
+static int read_frame()
 {
 	struct v4l2_buffer buf;
 	memset(&buf, 0, sizeof(buf));
@@ -55,20 +49,10 @@ static int read_frame(void)
 		}
 	}
 
-	memcpy(surface->pixels, (unsigned char *)buffer_start, fmt.fmt.pix.width * fmt.fmt.pix.height * (video_depth / 8));
-/*
-	SDL_Rect pos = {.x = 0, .y = 0};
-	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, length);
-	SDL_Surface *frame = IMG_Load_RW(buf_stream, 0);
-
-	SDL_BlitSurface(frame, NULL, surface, &pos);
-*/
-	SDL_Flip(surface);
-
-/*
-	SDL_FreeSurface(frame);
-	SDL_RWclose(buf_stream);
- */
+	SDL_Rect pos = { .x = 0, .y = 0, .w = fmt.fmt.pix.width, .h = fmt.fmt.pix.height};
+	memcpy(overlay->pixels[0], buffer_start, length);
+	overlay->pitches[0] = 320;
+	SDL_DisplayYUVOverlay(overlay, &pos);
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -79,11 +63,50 @@ static int read_frame(void)
 	return 1;
 }
 
+static int sdl_filter(const SDL_Event *event)
+{
+	return event->type == SDL_QUIT;
+}
+
 static void mainloop(void)
 {
-	unsigned long count = 100;
-	while (count-- > 0)
-		read_frame();
+	SDL_Event event;
+	for (;;) {
+		while (SDL_PollEvent(&event))
+			if (event.type == SDL_QUIT)
+				return;
+		for (;;) {
+			fd_set fds;
+			struct timeval tv;
+			int r;
+
+			FD_ZERO(&fds);
+			FD_SET(fd, &fds);
+
+			tv.tv_sec = 2;
+			tv.tv_usec = 0;
+
+			r = select(fd + 1, &fds, NULL, NULL, &tv);
+
+			if (-1 == r)
+			{
+				if (EINTR == errno)
+					continue;
+
+				errno_exit("select");
+			}
+
+			if (0 == r)
+			{
+				fprintf(stderr, "select timeout\n");
+				exit(EXIT_FAILURE);
+			}
+
+			if (read_frame())
+				break;
+			// EAGAIN - continue select loop.
+		}
+	}
 }
 
 static void stop_capturing(void)
@@ -121,20 +144,23 @@ int init_view()
 		return -1;
 	}
 
-	// load support for the JPG and PNG image formats
-	if (!IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG)) {
-		printf("IMG_Init: %s\n", IMG_GetError());
+	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, 24, SDL_HWSURFACE)) == NULL)
 		return -1;
-	}
 
-	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth, SDL_HWSURFACE)) == NULL)
+	if ((overlay = SDL_CreateYUVOverlay(fmt.fmt.pix.width, fmt.fmt.pix.height, SDL_YUY2_OVERLAY, surface)) == NULL)
 		return -1;
+
+	SDL_WM_SetCaption("V4L2 + SDL capture sample", NULL);
 
 	return 0;
 }
 
 void close_view()
 {
+
+	if (overlay)
+		SDL_FreeYUVOverlay(overlay);
+
 	if (surface)
 		SDL_FreeSurface(surface);
 
@@ -142,7 +168,6 @@ void close_view()
 	if (SDL_WasInit(SDL_INIT_VIDEO)) 
 		SDL_Quit();
 }
-
 
 static void init_mmap(void)
 {
@@ -229,6 +254,8 @@ int main()
 		close_device();
 		return -1;
 	}		
+
+	SDL_SetEventFilter(sdl_filter);
 
 	start_capturing ();
 	mainloop ();
