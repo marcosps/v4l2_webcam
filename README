@@ -1,0 +1,22 @@
+Webcam Streaming with V4L2 and SDL
+
+This code basically handles a webcam, activates the stream mode and
+renders it on a SDL Window.
+
+Most part of the code was based on some other implementations like:
+https://github.com/kryali/SmileTime/blob/master/SDL-capture-example.cpp
+http://www.cs.fsu.edu/~baker/devices/projects/pendawchi/src/capture.c
+
+In these cases, the developer converted YUYV (grabbed from webcam) to RGB, to be able to draw it
+in an SDL_Surface. So, I didn't wanted to learn such algorithm, I used SDL_Overlay, which
+is a "window" created over an SDL_Surface, but with the advantage of using YUYV
+directly, without converting formats.
+
+Notes:
+* pixel format is fixed in YUYV, because my webcam just have this format. Better webcams support
+	other formats.
+* It's a very basic support, just an example of how to do it
+
+References:
+http://sdl.beuc.net/sdl.wiki/SDL_Overlay
+https://en.wikipedia.org/wiki/YUV
