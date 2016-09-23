@@ -18,8 +18,8 @@ void *buffer_start    = NULL;
 int length = -1;
 enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 struct v4l2_format fmt;
-SDL_Surface *surface;
-SDL_Overlay *overlay;
+SDL_Surface *surface = NULL;
+SDL_Overlay *overlay = NULL;
 
 static void errno_exit(const char *s)
 {
@@ -27,6 +27,14 @@ static void errno_exit(const char *s)
                  s, errno, strerror (errno));
 
         exit (EXIT_FAILURE);
+}
+
+static void draw_YUV()
+{
+	SDL_Rect pos = { .x = 0, .y = 0, .w = fmt.fmt.pix.width, .h = fmt.fmt.pix.height};
+	memcpy(overlay->pixels[0], buffer_start, length);
+	overlay->pitches[0] = 320;
+	SDL_DisplayYUVOverlay(overlay, &pos);
 }
 
 static int read_frame()
@@ -49,10 +57,7 @@ static int read_frame()
 		}
 	}
 
-	SDL_Rect pos = { .x = 0, .y = 0, .w = fmt.fmt.pix.width, .h = fmt.fmt.pix.height};
-	memcpy(overlay->pixels[0], buffer_start, length);
-	overlay->pitches[0] = 320;
-	SDL_DisplayYUVOverlay(overlay, &pos);
+	draw_YUV();
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -157,7 +162,6 @@ int init_view()
 
 void close_view()
 {
-
 	if (overlay)
 		SDL_FreeYUVOverlay(overlay);
 
