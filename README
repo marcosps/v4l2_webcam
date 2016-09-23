@@ -13,9 +13,11 @@ in an SDL_Surface. So, I didn't wanted to learn such algorithm, I used SDL_Overl
 is a "window" created over an SDL_Surface, but with the advantage of using YUYV
 directly, without converting formats.
 
+For MJPEG, SDL loads the picture form memory, and then blits it to surface. Easier in this
+case.
+
 Notes:
-* pixel format is fixed in YUYV, because my webcam just have this format. Better webcams support
-	other formats.
+* This code just implements YUVY and MJPEG, but better cameras should have another formats
 * It's a very basic support, just an example of how to do it
 
 References:
