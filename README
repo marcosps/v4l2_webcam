@@ -13,7 +13,7 @@ in an SDL_Surface. So, I didn't wanted to learn such algorithm, I used SDL_Overl
 is a "window" created over an SDL_Surface, but with the advantage of using YUYV
 directly, without converting formats.
 
-For MJPEG, SDL loads the picture form memory, and then blits it to surface. Easier in this
+For MJPEG, SDL loads the picture from memory, and then blits it to surface. Easier in this
 case.
 
 Notes:
