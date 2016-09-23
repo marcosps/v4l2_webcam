@@ -1,4 +1,5 @@
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,9 +18,10 @@ static int fd         = -1;
 void *buffer_start    = NULL;
 int length = -1;
 enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-struct v4l2_format fmt;
 SDL_Surface *surface = NULL;
 SDL_Overlay *overlay = NULL;
+struct v4l2_format fmt;
+int video_depth = -1;
 
 static void errno_exit(const char *s)
 {
@@ -35,6 +37,20 @@ static void draw_YUV()
 	memcpy(overlay->pixels[0], buffer_start, length);
 	overlay->pitches[0] = 320;
 	SDL_DisplayYUVOverlay(overlay, &pos);
+}
+
+static void draw_MJPEG()
+{
+	SDL_Rect pos = {.x = 0, .y = 0};
+
+	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, length);
+	SDL_Surface *frame = IMG_Load_RW(buf_stream, 0);
+
+	SDL_BlitSurface(frame, NULL, surface, &pos);
+	SDL_Flip(surface);
+
+	SDL_FreeSurface(frame);
+	SDL_RWclose(buf_stream);
 }
 
 static int read_frame()
@@ -57,7 +73,10 @@ static int read_frame()
 		}
 	}
 
-	draw_YUV();
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
+		draw_YUV();
+	else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
+		draw_MJPEG();
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -149,11 +168,18 @@ int init_view()
 		return -1;
 	}
 
-	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, 24, SDL_HWSURFACE)) == NULL)
+	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth, SDL_HWSURFACE)) == NULL)
 		return -1;
 
-	if ((overlay = SDL_CreateYUVOverlay(fmt.fmt.pix.width, fmt.fmt.pix.height, SDL_YUY2_OVERLAY, surface)) == NULL)
-		return -1;
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
+		if ((overlay = SDL_CreateYUVOverlay(fmt.fmt.pix.width, fmt.fmt.pix.height, SDL_YUY2_OVERLAY, surface)) == NULL)
+			return -1;
+	} else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
+		if (!IMG_Init(IMG_INIT_JPG)) {
+			printf("Unable to initialize IMG\n");
+			return -1;
+		}
+	}
 
 	SDL_WM_SetCaption("V4L2 + SDL capture sample", NULL);
 
@@ -164,6 +190,9 @@ void close_view()
 {
 	if (overlay)
 		SDL_FreeYUVOverlay(overlay);
+
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
+		IMG_Quit();
 
 	if (surface)
 		SDL_FreeSurface(surface);
@@ -204,6 +233,32 @@ static void init_mmap(void)
 		errno_exit ("mmap");
 }
 
+static void get_pixelformat()
+{
+	struct v4l2_fmtdesc desc;
+
+	// Default to YUYV
+	memset(&fmt, 0, sizeof(fmt));
+	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	video_depth		= 24;
+
+	memset(&desc, 0, sizeof(desc));
+	desc.index = 0;
+	desc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	// iterate over all formats, and prefer MJPEG when available
+	while (ioctl(fd, VIDIOC_ENUM_FMT, &desc) == 0) {
+		desc.index++;
+
+		if (desc.pixelformat == V4L2_PIX_FMT_MJPEG) {
+			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+			video_depth = 32;
+			return;
+		}
+	}
+}
+
 static void init_device(void)
 {
 	struct v4l2_capability cap;
@@ -222,11 +277,9 @@ static void init_device(void)
 		exit (EXIT_FAILURE);
 	}
 
-	memset(&fmt, 0, sizeof(fmt));
-	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	get_pixelformat();
 	fmt.fmt.pix.width       = 640;
 	fmt.fmt.pix.height      = 480;
-	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
 	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
 		errno_exit ("VIDIOC_S_FMT");
