@@ -16,6 +16,10 @@ directly, without converting formats.
 For MJPEG, SDL loads the picture from memory, and then blits it to surface. Easier in this
 case.
 
+Dependencies:
+SDL-devel
+SDL-image-devel
+
 Notes:
 * This code just implements YUVY and MJPEG, but better cameras should have another formats
 * It's a very basic support, just an example of how to do it
