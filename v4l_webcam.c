@@ -254,9 +254,11 @@ static void get_pixelformat()
 		if (desc.pixelformat == V4L2_PIX_FMT_MJPEG) {
 			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
 			video_depth = 32;
+			printf("Using MJPEG\n");
 			return;
 		}
 	}
+	printf("Using YUYV\n");
 }
 
 static void init_device(void)
@@ -302,8 +304,21 @@ static void open_device(void)
 	}
 }
 
-int main()
+int main(int argc, char **argv)
 {
+	int opt;
+
+	while ((opt = getopt(argc, argv, "d:")) != -1) {
+		switch (opt) {
+		case 'd':
+			dev_name = optarg;
+			break;
+		default:
+			fprintf(stderr, "Usage: %s [-d dev_name]\n", argv[0]);
+			return -1;
+		}
+	}
+
 	open_device ();
 	init_device ();
 
