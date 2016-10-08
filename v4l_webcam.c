@@ -280,8 +280,8 @@ static void init_device(void)
 	}
 
 	get_pixelformat();
-	fmt.fmt.pix.width       = 640;
-	fmt.fmt.pix.height      = 480;
+	fmt.fmt.pix.width       = 1290;
+	fmt.fmt.pix.height      = 768;
 
 	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
 		errno_exit ("VIDIOC_S_FMT");
