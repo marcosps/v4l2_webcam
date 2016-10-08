@@ -304,18 +304,24 @@ static void open_device(void)
 	}
 }
 
+int help(char *prog_name)
+{
+	printf("Usage: %s [-d dev_name]\n", prog_name);
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "d:")) != -1) {
+	while ((opt = getopt(argc, argv, "hd:")) != -1) {
 		switch (opt) {
 		case 'd':
 			dev_name = optarg;
 			break;
+		case 'h':
 		default:
-			fprintf(stderr, "Usage: %s [-d dev_name]\n", argv[0]);
-			return -1;
+			return help(argv[0]);
 		}
 	}
 
