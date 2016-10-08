@@ -174,12 +174,14 @@ int init_view()
 	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
 		if ((overlay = SDL_CreateYUVOverlay(fmt.fmt.pix.width, fmt.fmt.pix.height, SDL_YUY2_OVERLAY, surface)) == NULL)
 			return -1;
-	} else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
+	} else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
 		if (!IMG_Init(IMG_INIT_JPG)) {
 			printf("Unable to initialize IMG\n");
 			return -1;
 		}
 	}
+	printf("Device: %s\nWidth: %d\nHeight: %d\nDepth: %d\n"
+		, dev_name, fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth);
 
 	SDL_WM_SetCaption("V4L2 + SDL capture sample", NULL);
 
@@ -280,8 +282,10 @@ static void init_device(void)
 	}
 
 	get_pixelformat();
-	fmt.fmt.pix.width       = 1290;
-	fmt.fmt.pix.height      = 768;
+
+	// it'll adjust to the bigger screen available in the driver
+	fmt.fmt.pix.width  = 3000;
+	fmt.fmt.pix.height = 3000;
 
 	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
 		errno_exit ("VIDIOC_S_FMT");
