@@ -21,7 +21,7 @@ enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 SDL_Surface *surface = NULL;
 SDL_Overlay *overlay = NULL;
 struct v4l2_format fmt;
-int video_depth = -1;
+int video_depth = 32;
 
 static void errno_exit(const char *s)
 {
@@ -243,7 +243,6 @@ static void get_pixelformat()
 	memset(&fmt, 0, sizeof(fmt));
 	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-	video_depth		= 24;
 
 	memset(&desc, 0, sizeof(desc));
 	desc.index = 0;
@@ -255,7 +254,6 @@ static void get_pixelformat()
 
 		if (desc.pixelformat == V4L2_PIX_FMT_MJPEG) {
 			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
-			video_depth = 32;
 			printf("Using MJPEG\n");
 			return;
 		}
