@@ -25,10 +25,8 @@ int video_depth = 32;
 
 static void errno_exit(const char *s)
 {
-        fprintf (stderr, "%s error %d, %s\n",
-                 s, errno, strerror (errno));
-
-        exit (EXIT_FAILURE);
+        fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
+        exit(EXIT_FAILURE);
 }
 
 static void draw_YUV()
@@ -136,7 +134,7 @@ static void mainloop(void)
 static void stop_capturing(void)
 {
 	if (ioctl(fd, VIDIOC_STREAMOFF, &type) == -1)
-		errno_exit ("VIDIOC_STREAMOFF");
+		errno_exit("VIDIOC_STREAMOFF");
 }
 
 static void start_capturing(void)
@@ -149,16 +147,16 @@ static void start_capturing(void)
 	buf.index = 0;
 
 	if (ioctl(fd, VIDIOC_QBUF, &buf) == -1)
-		errno_exit ("VIDIOC_QBUF ... !!!");
+		errno_exit("VIDIOC_QBUF ... !!!");
 
 	if (ioctl(fd, VIDIOC_STREAMON, &type) == -1)
-		errno_exit ("VIDIOC_STREAMON");
+		errno_exit("VIDIOC_STREAMON");
 }
 
 static void uninit_device(void)
 {
 	if (munmap(buffer_start, length) == -1)
-		errno_exit ("munmap");
+		errno_exit("munmap");
 }
 
 int init_view()
@@ -199,7 +197,6 @@ void close_view()
 	if (surface)
 		SDL_FreeSurface(surface);
 
-	surface = (SDL_Surface *)NULL;
 	if (SDL_WasInit(SDL_INIT_VIDEO)) 
 		SDL_Quit();
 }
@@ -213,7 +210,7 @@ static void init_mmap(void)
 	req.memory = V4L2_MEMORY_MMAP;
 
 	if (ioctl(fd, VIDIOC_REQBUFS, &req) == -1)
-		errno_exit ("VIDIOC_REQBUFS");
+		errno_exit("VIDIOC_REQBUFS");
 
 	struct v4l2_buffer buf;
 	memset(&buf, 0, sizeof(buf));
@@ -222,7 +219,7 @@ static void init_mmap(void)
 	buf.index = 0;
 
 	if (ioctl(fd, VIDIOC_QUERYBUF, &buf) == -1)
-		errno_exit ("VIDIOC_QUERYBUF");
+		errno_exit("VIDIOC_QUERYBUF");
 
 	length = buf.length;
 	buffer_start = mmap(NULL /* start anywhere */,
@@ -232,7 +229,7 @@ static void init_mmap(void)
 			fd, buf.m.offset);
 
 	if (buffer_start == MAP_FAILED)
-		errno_exit ("mmap");
+		errno_exit("mmap");
 }
 
 static void get_pixelformat()
@@ -260,16 +257,16 @@ static void init_device(void)
 
 	memset(&cap, 0, sizeof(cap));
 	if (ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
-		errno_exit ("VIDIOC_QUERYCAP");
+		errno_exit("VIDIOC_QUERYCAP");
 
 	if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-		fprintf (stderr, "%s is no video capture device\n", dev_name);
-		exit (EXIT_FAILURE);
+		fprintf(stderr, "%s is no video capture device\n", dev_name);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
-		fprintf (stderr, "%s does not support streaming i/o\n", dev_name);
-		exit (EXIT_FAILURE);
+		fprintf(stderr, "%s does not support streaming i/o\n", dev_name);
+		exit(EXIT_FAILURE);
 	}
 
 	// Default to YUYV
@@ -284,7 +281,7 @@ static void init_device(void)
 	fmt.fmt.pix.height = 3000;
 
 	if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
-		errno_exit ("VIDIOC_S_FMT");
+		errno_exit("VIDIOC_S_FMT");
 
 	init_mmap ();
 }
@@ -292,15 +289,15 @@ static void init_device(void)
 static void close_device(void)
 {
 	if (close (fd) == -1)
-		errno_exit ("close");
+		errno_exit("close");
 }
 
 static void open_device(void)
 {
 	if ((fd = open(dev_name, O_RDWR)) == -1) {
-		fprintf (stderr, "Cannot open '%s': %d, %s\n",
-				dev_name, errno, strerror (errno));
-		exit (EXIT_FAILURE);
+		fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno,
+				strerror (errno));
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -313,7 +310,6 @@ int help(char *prog_name)
 int main(int argc, char **argv)
 {
 	int opt;
-
 	while ((opt = getopt(argc, argv, "hd:")) != -1) {
 		switch (opt) {
 		case 'd':
@@ -325,8 +321,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	open_device ();
-	init_device ();
+	open_device();
+	init_device();
 
 	if(init_view()) {
 		close_device();
@@ -335,11 +331,11 @@ int main(int argc, char **argv)
 
 	SDL_SetEventFilter(sdl_filter);
 
-	start_capturing ();
-	mainloop ();
-	stop_capturing ();
+	start_capturing();
+	mainloop();
+	stop_capturing();
 	close_view();
-	uninit_device ();
-	close_device ();
+	uninit_device();
+	close_device();
 	return 0;
 }
