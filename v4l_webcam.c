@@ -238,14 +238,7 @@ static void init_mmap(void)
 static void get_pixelformat()
 {
 	struct v4l2_fmtdesc desc;
-
-	// Default to YUYV
-	memset(&fmt, 0, sizeof(fmt));
-	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-
 	memset(&desc, 0, sizeof(desc));
-	desc.index = 0;
 	desc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	// iterate over all formats, and prefer MJPEG when available
@@ -278,6 +271,11 @@ static void init_device(void)
 		fprintf (stderr, "%s does not support streaming i/o\n", dev_name);
 		exit (EXIT_FAILURE);
 	}
+
+	// Default to YUYV
+	memset(&fmt, 0, sizeof(fmt));
+	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
 	get_pixelformat();
 
