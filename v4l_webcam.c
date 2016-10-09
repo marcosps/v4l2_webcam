@@ -15,13 +15,16 @@
 
 static char *dev_name = "/dev/video0";
 static int fd         = -1;
-SDL_Surface *surface  = NULL;
-SDL_Overlay *overlay  = NULL;
-void *buffer_start    = NULL;
-int length            = -1;
-struct v4l2_format fmt;
+static SDL_Surface *surface = NULL;
+static SDL_Overlay *overlay = NULL;
+static void *buffer_start   = NULL;
+static size_t length        = 0;
+static struct v4l2_format fmt;
 
-static void errno_exit(const char *s)
+// necessary to silent clang warning
+static void errno_exit(const char *s) __attribute__((noreturn));
+
+static void errno_exit(const char *s) 
 {
         fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
         exit(EXIT_FAILURE);
@@ -29,7 +32,7 @@ static void errno_exit(const char *s)
 
 static void draw_YUV()
 {
-	SDL_Rect pos = { .x = 0, .y = 0, .w = fmt.fmt.pix.width, .h = fmt.fmt.pix.height};
+	SDL_Rect pos = { .x = 0, .y = 0, .w = (Uint16)fmt.fmt.pix.width, .h = (Uint16)fmt.fmt.pix.height};
 	memcpy(overlay->pixels[0], buffer_start, length);
 	overlay->pitches[0] = 320;
 	SDL_DisplayYUVOverlay(overlay, &pos);
@@ -39,7 +42,7 @@ static void draw_MJPEG()
 {
 	SDL_Rect pos = {.x = 0, .y = 0};
 
-	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, length);
+	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, (int)length);
 	SDL_Surface *frame = IMG_Load_RW(buf_stream, 0);
 
 	SDL_BlitSurface(frame, NULL, surface, &pos);
@@ -65,7 +68,7 @@ static int read_frame()
 				/* Could ignore EIO, see spec. */
 				/* fall through */
 			default:
-				errno_exit ("VIDIOC_DQBUF");
+				errno_exit("VIDIOC_DQBUF");
 		}
 	}
 
@@ -78,7 +81,7 @@ static int read_frame()
 	buf.memory = V4L2_MEMORY_MMAP;
 
 	if (ioctl(fd, VIDIOC_QBUF, &buf) == -1)
-		errno_exit ("VIDIOC_QBUF");
+		errno_exit("VIDIOC_QBUF");
 
 	return 1;
 }
@@ -159,7 +162,7 @@ static void uninit_device(void)
 		errno_exit("munmap");
 }
 
-int init_view()
+static int init_view()
 {
 	int video_depth = 32;
 	if (SDL_Init(SDL_INIT_VIDEO)) {
@@ -167,12 +170,17 @@ int init_view()
 		return -1;
 	}
 
-	if ((surface = SDL_SetVideoMode(fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth, SDL_HWSURFACE)) == NULL)
+	if ((surface = SDL_SetVideoMode((Uint16)fmt.fmt.pix.width
+					,(Uint16)fmt.fmt.pix.height
+					, video_depth
+					, SDL_HWSURFACE)) == NULL)
 		return -1;
 
-	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
-		if ((overlay = SDL_CreateYUVOverlay(fmt.fmt.pix.width, fmt.fmt.pix.height, SDL_YUY2_OVERLAY, surface)) == NULL)
-			return -1;
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV &&
+		(overlay = SDL_CreateYUVOverlay((Uint16)fmt.fmt.pix.width
+					, (Uint16)fmt.fmt.pix.height
+					, SDL_YUY2_OVERLAY, surface)) == NULL) {
+		return -1;
 	} else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
 		if (!IMG_Init(IMG_INIT_JPG)) {
 			printf("Unable to initialize IMG\n");
@@ -187,7 +195,7 @@ int init_view()
 	return 0;
 }
 
-void close_view()
+static void close_view()
 {
 	if (overlay)
 		SDL_FreeYUVOverlay(overlay);
@@ -302,7 +310,7 @@ static void open_device(void)
 	}
 }
 
-int help(char *prog_name)
+static int help(char *prog_name)
 {
 	printf("Usage: %s [-d dev_name]\n", prog_name);
 	return 0;
