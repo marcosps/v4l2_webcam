@@ -15,13 +15,11 @@
 
 static char *dev_name = "/dev/video0";
 static int fd         = -1;
+SDL_Surface *surface  = NULL;
+SDL_Overlay *overlay  = NULL;
 void *buffer_start    = NULL;
-int length = -1;
-enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-SDL_Surface *surface = NULL;
-SDL_Overlay *overlay = NULL;
+int length            = -1;
 struct v4l2_format fmt;
-int video_depth = 32;
 
 static void errno_exit(const char *s)
 {
@@ -133,6 +131,7 @@ static void mainloop(void)
 
 static void stop_capturing(void)
 {
+	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl(fd, VIDIOC_STREAMOFF, &type) == -1)
 		errno_exit("VIDIOC_STREAMOFF");
 }
@@ -140,9 +139,10 @@ static void stop_capturing(void)
 static void start_capturing(void)
 {
 	struct v4l2_buffer buf;
+	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	memset(&buf, 0, sizeof(buf));
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	buf.type = type;
 	buf.memory = V4L2_MEMORY_MMAP;
 	buf.index = 0;
 
@@ -161,6 +161,7 @@ static void uninit_device(void)
 
 int init_view()
 {
+	int video_depth = 32;
 	if (SDL_Init(SDL_INIT_VIDEO)) {
 		printf("Unable to initialize SDL\n");
 		return -1;
