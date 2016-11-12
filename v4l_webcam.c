@@ -34,7 +34,7 @@ static void draw_YUV()
 {
 	SDL_Rect pos = { .x = 0, .y = 0, .w = (Uint16)fmt.fmt.pix.width, .h = (Uint16)fmt.fmt.pix.height};
 	memcpy(overlay->pixels[0], buffer_start, length);
-	overlay->pitches[0] = 320;
+	overlay->pitches[0] = 320; // pixels per row
 	SDL_DisplayYUVOverlay(overlay, &pos);
 }
 
