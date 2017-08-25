@@ -1,5 +1,6 @@
 project('v4l2_webcam', 'c')
-add_project_arguments(['-Wall', '-Werror'], language: 'c')
+add_project_arguments(['-Wall', '-Werror', '-Wextra'
+			, '-fstack-protector-all'], language: 'c')
 
 sdl_dep = dependency('sdl')
 sdl_img_dep = dependency('SDL_image')
