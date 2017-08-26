@@ -1,5 +1,5 @@
-#include <SDL/SDL.h>
-#include <SDL/SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +15,12 @@
 
 static char *dev_name = "/dev/video0";
 static int fd         = -1;
-static SDL_Surface *surface = NULL;
-static SDL_Overlay *overlay = NULL;
+static SDL_Window *window = NULL;
+static SDL_Renderer *renderer = NULL;
+static SDL_Texture *texture = NULL;
 static void *buffer_start   = NULL;
 static size_t length        = 0;
 static struct v4l2_format fmt;
-
-// necessary to silent clang warning
-static void errno_exit(const char *s) __attribute__((noreturn));
 
 static void errno_exit(const char *s) 
 {
@@ -32,12 +30,14 @@ static void errno_exit(const char *s)
 
 static void draw_YUV()
 {
-	SDL_Rect pos = { .x = 0, .y = 0, .w = (Uint16)fmt.fmt.pix.width, .h = (Uint16)fmt.fmt.pix.height};
-	memcpy(overlay->pixels[0], buffer_start, length);
-	overlay->pitches[0] = 320; // pixels per row
-	SDL_DisplayYUVOverlay(overlay, &pos);
-}
+	// YUYV is two bytes per pixel, so multiple line width by 2
+	SDL_UpdateTexture(texture, NULL, buffer_start, fmt.fmt.pix.width * 2);
 
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	SDL_RenderPresent(renderer);
+}
+/*
 static void draw_MJPEG()
 {
 	SDL_Rect pos = {.x = 0, .y = 0};
@@ -51,6 +51,7 @@ static void draw_MJPEG()
 	SDL_FreeSurface(frame);
 	SDL_RWclose(buf_stream);
 }
+*/
 
 static int read_frame()
 {
@@ -74,8 +75,8 @@ static int read_frame()
 
 	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
 		draw_YUV();
-	else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
-		draw_MJPEG();
+	/*else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)*/
+		/*draw_MJPEG();*/
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -86,8 +87,9 @@ static int read_frame()
 	return 1;
 }
 
-static int sdl_filter(const SDL_Event *event)
+static int sdl_filter(void *userdata, SDL_Event *event)
 {
+	(void)userdata;
 	return event->type == SDL_QUIT;
 }
 
@@ -164,47 +166,48 @@ static void uninit_device(void)
 
 static int init_view()
 {
-	int video_depth = 32;
 	if (SDL_Init(SDL_INIT_VIDEO)) {
 		printf("Unable to initialize SDL\n");
 		return -1;
 	}
 
-	if ((surface = SDL_SetVideoMode((Uint16)fmt.fmt.pix.width
-					,(Uint16)fmt.fmt.pix.height
-					, video_depth
-					, SDL_HWSURFACE)) == NULL)
+	if (SDL_CreateWindowAndRenderer(fmt.fmt.pix.width
+					, fmt.fmt.pix.height
+					, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
+					, &window
+					, &renderer)) {
+		printf("SDL_CreateWindowAndRenderer failed: %s\n", SDL_GetError());
 		return -1;
+	}
 
-	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV &&
-		(overlay = SDL_CreateYUVOverlay((Uint16)fmt.fmt.pix.width
-					, (Uint16)fmt.fmt.pix.height
-					, SDL_YUY2_OVERLAY, surface)) == NULL) {
-		return -1;
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
+		texture = SDL_CreateTexture(renderer
+						// YUY2 is also know as YUYV in SDL
+						, SDL_PIXELFORMAT_YUY2
+						, SDL_TEXTUREACCESS_STREAMING
+						, fmt.fmt.pix.width
+						, fmt.fmt.pix.height);
+		if (!texture) {
+			printf("SDL_CreateTexture failed: %s\n", SDL_GetError());
+			return -1;
+		}
 	} else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
 		if (!IMG_Init(IMG_INIT_JPG)) {
 			printf("Unable to initialize IMG\n");
 			return -1;
 		}
 	}
-	printf("Device: %s\nWidth: %d\nHeight: %d\nDepth: %d\n"
-		, dev_name, fmt.fmt.pix.width, fmt.fmt.pix.height, video_depth);
 
-	SDL_WM_SetCaption("V4L2 + SDL capture sample", NULL);
+	printf("Device: %s\nWidth: %d\nHeight: %d\n"
+		, dev_name, fmt.fmt.pix.width, fmt.fmt.pix.height);
 
 	return 0;
 }
 
 static void close_view()
 {
-	if (overlay)
-		SDL_FreeYUVOverlay(overlay);
-
 	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
 		IMG_Quit();
-
-	if (surface)
-		SDL_FreeSurface(surface);
 
 	if (SDL_WasInit(SDL_INIT_VIDEO)) 
 		SDL_Quit();
@@ -338,7 +341,7 @@ int main(int argc, char **argv)
 		return -1;
 	}		
 
-	SDL_SetEventFilter(sdl_filter);
+	SDL_SetEventFilter(sdl_filter, NULL);
 
 	start_capturing();
 	mainloop();
