@@ -37,21 +37,21 @@ static void draw_YUV()
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
-/*
+
 static void draw_MJPEG()
 {
-	SDL_Rect pos = {.x = 0, .y = 0};
-
 	SDL_RWops *buf_stream = SDL_RWFromMem(buffer_start, (int)length);
 	SDL_Surface *frame = IMG_Load_RW(buf_stream, 0);
+	SDL_Texture *tx = SDL_CreateTextureFromSurface(renderer, frame);
 
-	SDL_BlitSurface(frame, NULL, surface, &pos);
-	SDL_Flip(surface);
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, tx, NULL, NULL);
+	SDL_RenderPresent(renderer);
 
+	SDL_DestroyTexture(tx);
 	SDL_FreeSurface(frame);
 	SDL_RWclose(buf_stream);
 }
-*/
 
 static int read_frame()
 {
@@ -75,8 +75,8 @@ static int read_frame()
 
 	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
 		draw_YUV();
-	/*else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)*/
-		/*draw_MJPEG();*/
+	else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
+		draw_MJPEG();
 
 	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory = V4L2_MEMORY_MMAP;
@@ -206,6 +206,13 @@ static int init_view()
 
 static void close_view()
 {
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
+		SDL_DestroyTexture(texture);
+
+	SDL_DestroyRenderer(renderer);
+
+	SDL_DestroyWindow(window);
+
 	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
 		IMG_Quit();
 
