@@ -1,4 +1,5 @@
 Webcam Streaming with V4L2 and SDL
+==================================
 
 This code basically handles a webcam, activates the stream mode and
 renders it on a SDL Window.
@@ -27,3 +28,16 @@ Notes:
 References:
 http://sdl.beuc.net/sdl.wiki/SDL_Overlay
 https://en.wikipedia.org/wiki/YUV
+
+Build
+=====
+
+To test this code, need the following dependencies:
+* meson (build system)
+* SDL2-devel
+* SDL2_image-devel
+
+If you want to try this app using flatpak, you can follow the steps below:
+* Install flatpak
+* Execute make (it will install this application locally)
+* Execute "flatpak run org.test.V4lWebcam" to run the app
