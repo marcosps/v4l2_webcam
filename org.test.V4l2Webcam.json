@@ -1,0 +1,27 @@
+{
+	"app-id": "org.test.V4lWebcam",
+	"sdk": "org.gnome.Sdk",
+	"runtime": "org.gnome.Platform",
+	"runtime-version": "3.24",
+	"command": "v4l2_webcam",
+	"finish-args": [
+		"--socket=x11",
+		"--socket=wayland",
+		"--device=all"
+	],
+	"modules": [
+		{
+			"name": "v4l2_webcam",
+			"buildsystem": "meson",
+			"builddir": true,
+			"sources": [
+				{
+					"type": "git",
+					"url": "git://github.com/marcosps/v4l2_webcam",
+					"commit": "164e91eb257a65d2b3f7f02b9cf1ee6799bd79b8"
+				}
+			]
+		}
+	]
+}
+
