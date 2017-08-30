@@ -10,11 +10,10 @@ http://www.cs.fsu.edu/~baker/devices/projects/pendawchi/src/capture.c
 https://jwhsmith.net/2014/12/capturing-a-webcam-stream-using-v4l2/
 
 In these cases, the developer converted YUYV (grabbed from webcam) to RGB, to be able to draw it
-in an SDL_Surface. So, I didn't wanted to learn such algorithm, I used SDL_Overlay, which
-is a "window" created over an SDL_Surface, but with the advantage of using YUYV
-directly, without converting formats.
+in an SDL_Surface. So, I didn't wanted to learn such algorithm, and by using SDL2 I created a texture
+with YUY2 as pixel format, and so we can draw YUV frames directly without any convertion.
 
-For MJPEG, SDL loads the picture from memory, and then blits it to surface. Easier in this
+For MJPEG, SDL2 loads the "picture" from memory, create a texture and renders. Easier in this
 case.
 
 Dependencies:
