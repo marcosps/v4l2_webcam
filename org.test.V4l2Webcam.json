@@ -9,6 +9,10 @@
 		"--socket=wayland",
 		"--device=all"
 	],
+	"build-options": {
+		"cflags": "-O2 -g -Werror -Wextra -Wall -fstack-protector-all -O2 -D_FORTIFY=2",
+		"ldflags": "-fstack-protector-all -Wl,-z,relro,-z,now"
+	},
 	"modules": [
 		{
 			"name": "v4l2_webcam",
