@@ -16,10 +16,6 @@ with YUY2 as pixel format, and so we can draw YUV frames directly without any co
 For MJPEG, SDL2 loads the "picture" from memory, create a texture and renders. Easier in this
 case.
 
-Dependencies:
-SDL-devel
-SDL-image-devel
-
 Notes:
 * This code just implements YUVY and MJPEG, but better cameras should have another formats
 * It's a very basic support, just an example of how to do it
